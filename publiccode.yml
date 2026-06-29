@@ -1,9 +1,8 @@
 # This repository adheres to the publiccode.yml standard by including this
 # metadata file that makes public software easily discoverable.
-# More info at https://github.com/publiccodeyml/publiccode.yml
+# More info at https://github.com/italia/publiccode.yml
 
-publiccodeYmlVersion: "0.5"
-
+publiccodeYmlVersion: "0.2"
 name: Accounting Entry (Buchungssatz) for Moodle
 url: "https://github.com/lambda9-gmbh/moodle-qtype_accounting.git"
 landingURL: "https://github.com/lambda9-gmbh/moodle-qtype_accounting"
@@ -12,24 +11,15 @@ softwareVersion: 1.0.0
 developmentStatus: stable
 softwareType: addon
 logo: pix/icon.svg
-
 platforms:
   - web
-
 categories:
   - educational-content
-
 usedBy:
   - Hochschule Flensburg
-
 organisation:
   name: lambda9 GmbH
   uri: "https://lambda9.de"
-
-intendedAudience:
-  scope:
-    - education
-
 dependsOn:
   open:
     - name: Moodle
@@ -42,24 +32,23 @@ dependsOn:
     - name: PostgreSQL
       versionMin: "16"
       optional: true
-
-legal:
-  license: GPL-3.0-or-later
-  mainCopyrightOwner: Hochschule Flensburg / lambda9
-
 maintenance:
   type: internal
   contacts:
     - name: Benjamin Klink
       email: bkl@lambda9.de
       affiliation: lambda9 GmbH
-
+legal:
+  license: GPL-3.0-or-later
+  mainCopyrightOwner: Hochschule Flensburg / lambda9
+intendedAudience:
+  scope:
+    - education
 localisation:
   localisationReady: true
   availableLanguages:
     - en
     - de
-
 description:
   en:
     localisedName: Accounting Entry
@@ -105,7 +94,7 @@ description:
       - CSV import and export of charts of accounts (UTF-8 / Windows-1252)
       - Optional decoy accounts in account dropdowns
       - Searchable account dropdowns where Select2 is available
-      - Per-field colour feedback after submission, with side-level summary
+      - "Per-field colour feedback after submission, with side-level summary"
       - Toggle between German and US number formats
       - Moodle XML question import/export with embedded chart of accounts
       - Course backup and restore support
@@ -117,8 +106,8 @@ description:
     localisedName: Buchungssatz (Accounting Entry)
     genericName: Moodle-Fragetyp
     shortDescription: >-
-      Moodle-Fragetyp zum Üben von Buchungssätzen mit kursbezogenen
-      Kontenrahmen und gewichteter Teilbewertung.
+      Moodle-Fragetyp zum Üben von Buchungssätzen mit kursbezogenen Kontenrahmen
+      und gewichteter Teilbewertung.
     longDescription: |
       Der Fragetyp „Buchungssatz“ ermöglicht die
       Prüfung der doppelten Buchführung direkt in einem Moodle-Test.
@@ -156,7 +145,7 @@ description:
       - Feldweise Gewichtung für Teilbewertung
       - Optionale Alles-oder-Nichts-Bewertung
       - Konfigurierbarer Abzug für zusätzliche falsche Konten
-      - Kursbezogene Kontenrahmen, direkt in Moodle verwaltet
+      - "Kursbezogene Kontenrahmen, direkt in Moodle verwaltet"
       - CSV-Import und -Export von Kontenrahmen (UTF-8 / Windows-1252)
       - Optionale Ablenkungskonten in den Kontoauswahllisten
       - Suchbare Kontoauswahl wenn Select2 verfügbar ist
