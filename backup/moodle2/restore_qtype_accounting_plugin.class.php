@@ -39,8 +39,8 @@ class restore_qtype_accounting_plugin extends restore_qtype_plugin {
     /** @var array Account data collected from backup XML. */
     protected $chartaccounts = [];
 
-    /** @var array Cache of chart name => chart ID to avoid duplicates across questions. */
-    protected static $chartidcache = [];
+    /** @var array Map of source account IDs to IDs in the current question's restored chart. */
+    protected $accountidmap = [];
 
     /**
      * Returns the paths to be handled by the plugin at question level.
@@ -77,6 +77,7 @@ class restore_qtype_accounting_plugin extends restore_qtype_plugin {
         $data = (object) $data;
         $this->chartname = $data->name ?? '';
         $this->chartaccounts = [];
+        $this->accountidmap = [];
     }
 
     /**
@@ -116,6 +117,7 @@ class restore_qtype_accounting_plugin extends restore_qtype_plugin {
 
         // Resolve chart of accounts.
         $data->chartofaccountsid = $this->resolve_chart();
+        $this->map_chart_account_ids($data->chartofaccountsid);
 
         unset($data->id);
         $DB->insert_record('qtype_accounting_options', $data);
@@ -182,18 +184,40 @@ class restore_qtype_accounting_plugin extends restore_qtype_plugin {
     }
 
     /**
-     * Convert legacy name-based account fields (debitaccount/creditaccount) to ID-based fields.
+     * Remap account IDs to the restored chart, or resolve legacy name-based account fields.
      *
      * @param \stdClass $data Entry data, modified in place.
      */
     protected function resolve_entry_account_ids(\stdClass $data): void {
-        if (isset($data->debitaccount) && !isset($data->debitaccountid)) {
-            $data->debitaccountid = $this->resolve_account_name_to_id($data->debitaccount, $data->questionid);
-            unset($data->debitaccount);
+        foreach (['debitaccount', 'creditaccount'] as $field) {
+            $idfield = $field . 'id';
+            if (isset($data->$field) && !isset($data->$idfield)) {
+                $data->$idfield = $this->resolve_account_name_to_id($data->$field, $data->questionid);
+            } else {
+                // Never retain source database IDs, which may refer to unrelated accounts on the target.
+                $data->$idfield = $this->accountidmap[$data->$idfield ?? 0] ?? null;
+            }
+            unset($data->$field);
         }
-        if (isset($data->creditaccount) && !isset($data->creditaccountid)) {
-            $data->creditaccountid = $this->resolve_account_name_to_id($data->creditaccount, $data->questionid);
-            unset($data->creditaccount);
+    }
+
+    /**
+     * Map backup account IDs by name to the accounts in the resolved target chart.
+     *
+     * This works for both newly created charts and matching existing charts.
+     *
+     * @param int $chartid The resolved chart ID.
+     */
+    protected function map_chart_account_ids(int $chartid): void {
+        $this->accountidmap = [];
+        $accountsbyname = [];
+        foreach (\qtype_accounting\account_manager::get_for_chart($chartid) as $account) {
+            $accountsbyname[$account->accountname] = (int) $account->id;
+        }
+        foreach ($this->chartaccounts as $account) {
+            if (isset($account->id, $accountsbyname[$account->accountname])) {
+                $this->accountidmap[$account->id] = $accountsbyname[$account->accountname];
+            }
         }
     }
 
@@ -201,22 +225,14 @@ class restore_qtype_accounting_plugin extends restore_qtype_plugin {
      * Resolve the chart of accounts for the current question.
      *
      * 1. If no chart data in backup, return 0.
-     * 2. Check cache for already-resolved chart with same name.
-     * 3. Find existing match in target course context.
-     * 4. If no match, create new chart + accounts.
-     * 5. Cache result.
+     * 2. Find existing match in target course context, including charts created for earlier questions.
+     * 3. If no match, create new chart + accounts.
      *
      * @return int The resolved chart ID, or 0 if no chart data.
      */
     protected function resolve_chart(): int {
         if (empty($this->chartname)) {
             return 0;
-        }
-
-        // Check cache first.
-        $cachekey = $this->chartname;
-        if (isset(self::$chartidcache[$cachekey])) {
-            return self::$chartidcache[$cachekey];
         }
 
         // Determine target course context.
@@ -251,9 +267,6 @@ class restore_qtype_accounting_plugin extends restore_qtype_plugin {
                 );
             }
         }
-
-        // Cache for subsequent questions in the same restore.
-        self::$chartidcache[$cachekey] = $chartid;
 
         return $chartid;
     }

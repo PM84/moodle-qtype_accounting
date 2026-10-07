@@ -50,7 +50,7 @@ class backup_qtype_accounting_plugin extends backup_qtype_plugin {
         $chartaccounts = new backup_nested_element('chart_accounts');
         $chartaccount = new backup_nested_element(
             'chart_account',
-            null,
+            ['id'],
             ['accountname', 'sortorder']
         );
 
@@ -92,7 +92,7 @@ class backup_qtype_accounting_plugin extends backup_qtype_plugin {
         );
 
         $chartaccount->set_source_sql(
-            "SELECT a.accountname, a.sortorder
+            "SELECT a.id, a.accountname, a.sortorder
                FROM {qtype_accounting_accounts} a
                JOIN {qtype_accounting_charts} c ON c.id = a.chartid
                JOIN {qtype_accounting_options} o ON o.chartofaccountsid = c.id
