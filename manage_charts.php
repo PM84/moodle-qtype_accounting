@@ -84,7 +84,7 @@ if ($action === 'delete' && $chartid) {
         throw new moodle_exception('chartnotfound', 'qtype_accounting');
     }
 
-    if (optional_param('confirm', 0, PARAM_BOOL)) {
+    if (data_submitted() && optional_param('confirm', 0, PARAM_BOOL)) {
         require_sesskey();
         chart_manager::delete_chart($chartid);
         redirect($baseurl, get_string('chartdeleted', 'qtype_accounting'), null, \core\output\notification::NOTIFY_SUCCESS);
@@ -93,8 +93,12 @@ if ($action === 'delete' && $chartid) {
     // Show confirmation page.
     echo $OUTPUT->header();
     echo $OUTPUT->confirm(
-        get_string('confirmdelete', 'qtype_accounting') . ' <strong>' . format_string($chart->name) . '</strong>',
-        new moodle_url($baseurl, ['action' => 'delete', 'chartid' => $chartid, 'confirm' => 1]),
+        get_string('confirmdelete', 'qtype_accounting', format_string($chart->name)),
+        new single_button(
+            new moodle_url($baseurl, ['action' => 'delete', 'chartid' => $chartid, 'confirm' => 1]),
+            get_string('deletechart', 'qtype_accounting'),
+            'post'
+        ),
         $baseurl
     );
     echo $OUTPUT->footer();
@@ -153,6 +157,7 @@ if ($data = $uploadform->get_data()) {
 }
 
 // Display the page.
+$PAGE->requires->js_call_amd('qtype_accounting/manage_charts', 'init');
 echo $OUTPUT->header();
 echo $OUTPUT->heading(get_string('managecharts', 'qtype_accounting'));
 
@@ -210,7 +215,11 @@ if (empty($charts)) {
             $OUTPUT->pix_icon('i/export', get_string('exportaccounts', 'qtype_accounting'))
         );
         $actions .= ' ';
-        $actions .= html_writer::link($deleteurl, $OUTPUT->pix_icon('t/delete', get_string('delete')));
+        $actions .= html_writer::link($deleteurl, $OUTPUT->pix_icon('t/delete', get_string('delete')), [
+            'data-action' => 'qtype_accounting-delete-chart',
+            'data-confirmation-title' => get_string('deletechart', 'qtype_accounting'),
+            'data-confirmation-message' => get_string('confirmdelete', 'qtype_accounting', format_string($chart->name)),
+        ]);
 
         $table->data[] = [
             html_writer::link($editurl, format_string($chart->name)),

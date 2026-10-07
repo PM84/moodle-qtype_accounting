@@ -188,7 +188,7 @@ Feature: Create and edit Buchungssatz questions
     When I switch to a second window
     And I click on "Manage Charts of Accounts" "link"
     And I click on "Delete" "link" in the "Renamed" "table_row"
-    And I press "Continue"
+    And I press "Delete chart"
     And I switch to the main window
     And I press "Refresh charts of accounts"
     Then I should see "A selected chart or account is no longer available."

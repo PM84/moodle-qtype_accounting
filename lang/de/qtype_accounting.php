@@ -136,7 +136,7 @@ $string['chartcreated'] = 'Kontenplan erfolgreich erstellt.';
 $string['chartdeleted'] = 'Kontenplan erfolgreich gelöscht.';
 $string['chartrenamed'] = 'Kontenplan erfolgreich umbenannt.';
 $string['imported'] = '{$a} Konten erfolgreich importiert.';
-$string['confirmdelete'] = 'Sind Sie sicher, dass Sie diesen Kontenplan löschen möchten?';
+$string['confirmdelete'] = 'Sind Sie sicher, dass Sie den Kontenplan "{$a}" endgültig löschen möchten? Alle Konten dieses Kontenplans werden ebenfalls gelöscht. Fragen, die diesen Kontenplan verwenden, funktionieren danach nicht mehr korrekt. Diese Aktion kann nicht rückgängig gemacht werden.';
 $string['balanced'] = 'Ausgeglichen';
 
 // Kontenverwaltung.

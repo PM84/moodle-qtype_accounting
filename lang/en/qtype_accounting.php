@@ -136,7 +136,7 @@ $string['chartcreated'] = 'Chart of accounts created successfully.';
 $string['chartdeleted'] = 'Chart of accounts deleted successfully.';
 $string['chartrenamed'] = 'Chart of accounts renamed successfully.';
 $string['imported'] = '{$a} accounts imported successfully.';
-$string['confirmdelete'] = 'Are you sure you want to delete this chart of accounts?';
+$string['confirmdelete'] = 'Are you sure you want to permanently delete the chart of accounts "{$a}"? All accounts in this chart will also be deleted. Questions that use this chart will no longer work correctly. This action cannot be undone.';
 $string['balanced'] = 'Balanced';
 
 // Account management.
