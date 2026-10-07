@@ -26,6 +26,36 @@ Feature: Create and edit Buchungssatz questions
     And I should see "Correct Answer"
 
   @javascript
+  Scenario: Cancel a new question with empty required fields
+    Given I am on the "Course 1" "core_question > course question bank" page logged in as "teacher1"
+    When I press "Create a new question ..."
+    And I set the field "Accounting Entry" to "1"
+    And I click on "Add" "button" in the "Choose a question type to add" "dialogue"
+    And I press "Cancel"
+    Then I should see "Create a new question ..."
+    And I should not see "Adding an Accounting Entry question"
+
+  @javascript
+  Scenario: Cancel unbalanced entries after a rejected save
+    Given the accounting chart "Main" with accounts "Bank, Cash" exists in course "Course 1"
+    And I am on the "Course 1" "core_question > course question bank" page logged in as "teacher1"
+    When I press "Create a new question ..."
+    And I set the field "Accounting Entry" to "1"
+    And I click on "Add" "button" in the "Choose a question type to add" "dialogue"
+    And I set the field "Question name" to "Cancelled accounting question"
+    And I set the field "Question text" to "Record the transaction."
+    And I set the field "Chart of Accounts" to "Main"
+    And I set the field "debitaccount_display[0]" to "Bank"
+    And I set the field "debitamount_display[0]" to "100"
+    And I press "id_submitbutton"
+    Then I should see "Please select an account, or remove this entry."
+    And I should see "Total debit amount must equal total credit amount for a valid accounting entry."
+    When I press "Cancel"
+    Then I should see "Create a new question ..."
+    And I should not see "Adding an Accounting Entry question"
+    And I should not see "Cancelled accounting question"
+
+  @javascript
   Scenario: Question form shows entry input fields
     Given I am on the "Course 1" "core_question > course question bank" page logged in as "teacher1"
     When I press "Create a new question ..."

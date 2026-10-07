@@ -433,6 +433,10 @@ function setupFormSubmitHandler() {
     const form = document.querySelector('form.mform') || document.querySelector('form');
     if (form) {
         form.addEventListener('submit', function (e) {
+            // Moodle cancel buttons submit the form without saving or validating it.
+            if (e.submitter && e.submitter.getAttribute('data-cancel') === '1') {
+                return;
+            }
             syncAllDisplayToHidden();
             var valid = validateAccounts();
             if (!validateBalance()) {
