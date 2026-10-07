@@ -24,6 +24,7 @@
 import $ from 'jquery';
 import * as Str from 'core/str';
 import Log from 'core/log';
+import {call as ajaxCall} from 'core/ajax';
 import * as EntryUtils from 'qtype_accounting/entry_utils';
 
 // Module-level state.
@@ -36,6 +37,7 @@ let allOrNothingEnabled = false;
 let chartSelect = null;
 let numberFormatSelect = null;
 let initialChartId = '0';
+let unavailableMessage = '';
 
 // CSS selector for entry rows in the edit form.
 var ROW_SELECTOR = '.qtype_accounting-entry-row';
@@ -86,6 +88,7 @@ function init() {
 
     // Setup event handlers.
     setupChartChangeHandler();
+    setupChartRefreshHandler(config.courseId);
     setupNumberFormatChangeHandler();
     setupDebitaccountChangeHandler();
     setupAddEntryHandler();
@@ -136,10 +139,83 @@ function calculateNextEntryIndex() {
 function setupChartChangeHandler() {
     if (chartSelect) {
         chartSelect.addEventListener('change', function () {
+            checkOptionAvailability(chartSelect);
             lastChartId = null; // Reset to force rebuild.
             updateAccountDropdowns(true);
         });
     }
+}
+
+/**
+ * Refresh chart and account options on demand, keeping the question form in place.
+ *
+ * @param {number} courseId Course ID.
+ */
+function setupChartRefreshHandler(courseId) {
+    const button = document.getElementById('qtype_accounting-refresh-charts');
+    const status = document.getElementById('qtype_accounting-refresh-status');
+    if (!button || !chartSelect || !courseId) {
+        return;
+    }
+    button.addEventListener('click', async function() {
+        button.disabled = true;
+        status.textContent = '';
+        try {
+            const messages = await Str.get_strings([
+                {key: 'refreshchartsdone', component: 'qtype_accounting'},
+                {key: 'refreshchartsmissing', component: 'qtype_accounting'},
+                {key: 'err_accountunavailable', component: 'qtype_accounting'},
+            ]);
+            const charts = await ajaxCall([{
+                methodname: 'qtype_accounting_get_charts',
+                args: {courseid: courseId},
+            }])[0];
+            unavailableMessage = messages[2];
+            // Read selections after the request: the teacher may edit while it is in flight.
+            const chartId = chartSelect.value;
+            const selectedOption = chartSelect.selectedOptions[0];
+            const freshAccounts = {};
+            while (chartSelect.options.length > 1) {
+                chartSelect.remove(1);
+            }
+            charts.forEach(function(chart) {
+                const label = document.createElement('div');
+                label.innerHTML = chart.name;
+                chartSelect.add(new Option(label.textContent, chart.id));
+                freshAccounts[chart.id] = {};
+                chart.accounts.forEach(function(account) {
+                    freshAccounts[chart.id][account.id] = account.name;
+                });
+            });
+            if (chartId !== '0' && !Object.prototype.hasOwnProperty.call(freshAccounts, chartId)) {
+                selectedOption.dataset.unavailable = 'true';
+                chartSelect.add(selectedOption);
+            }
+            chartSelect.value = chartId;
+            checkOptionAvailability(chartSelect);
+            accountsByChart = freshAccounts;
+            updateAccountDropdowns(true, true);
+            syncAllDisplayToHidden();
+            const missing = document.querySelector('option[data-unavailable="true"]:checked');
+            status.textContent = ' ' + messages[missing ? 1 : 0];
+        } catch (error) {
+            Log.error('Failed to refresh accounting charts', error);
+            status.textContent = ' ' + await Str.get_string('refreshchartsfailed', 'qtype_accounting');
+        } finally {
+            button.disabled = false;
+        }
+    });
+}
+
+/**
+ * Block saving a selection which disappeared during a refresh.
+ *
+ * @param {HTMLSelectElement} select Chart or account selector.
+ */
+function checkOptionAvailability(select) {
+    const missing = select.selectedOptions[0] && select.selectedOptions[0].dataset.unavailable;
+    select.setCustomValidity(missing ? unavailableMessage : '');
+    select.classList.toggle('is-invalid', !!missing);
 }
 
 /**
@@ -182,6 +258,7 @@ function setupDebitaccountChangeHandler() {
             return;
         }
         if (e.target.classList.contains('qtype_accounting-debitaccount')) {
+            checkOptionAvailability(e.target);
             const index = e.target.getAttribute('data-index');
             updateDebitamountState(index);
             updateWeightStates(index);
@@ -189,6 +266,7 @@ function setupDebitaccountChangeHandler() {
         }
         // Handle creditaccount changes to update weight states.
         if (e.target.classList.contains('qtype_accounting-creditaccount')) {
+            checkOptionAvailability(e.target);
             const index = e.target.getAttribute('data-index');
             updateWeightStates(index);
             syncDisplayToHidden(index);
@@ -375,6 +453,10 @@ function setupFormSubmitHandler() {
 function validateAccounts() {
     var errors = [];
     clearAccountErrors();
+    if (chartSelect && chartSelect.selectedOptions[0] && chartSelect.selectedOptions[0].dataset.unavailable) {
+        showAccountError(chartSelect, 'err_accountunavailable');
+        errors.push('chart');
+    }
 
     var entryRows = document.querySelectorAll(ROW_SELECTOR);
     entryRows.forEach(function (row) {
@@ -393,7 +475,10 @@ function validateAccounts() {
         // Debit side is visible for 'debit' and 'both' entries.
         if (entryType === 'debit' || entryType === 'both') {
             var hasDebitAccount = debitAccount && debitAccount.value && debitAccount.value !== '';
-            if (!hasDebitAccount) {
+            if (hasDebitAccount && debitAccount.selectedOptions[0].dataset.unavailable) {
+                showAccountError(debitAccount, 'err_accountunavailable');
+                errors.push(index);
+            } else if (!hasDebitAccount) {
                 showAccountError(debitAccount, 'err_debitaccountrequired');
                 errors.push(index);
             }
@@ -402,7 +487,10 @@ function validateAccounts() {
         // Credit side is visible for 'credit' and 'both' entries.
         if (entryType === 'credit' || entryType === 'both') {
             var hasCreditAccount = creditAccount && creditAccount.value && creditAccount.value !== '';
-            if (!hasCreditAccount) {
+            if (hasCreditAccount && creditAccount.selectedOptions[0].dataset.unavailable) {
+                showAccountError(creditAccount, 'err_accountunavailable');
+                errors.push(index);
+            } else if (!hasCreditAccount) {
                 showAccountError(creditAccount, 'err_creditaccountrequired');
                 errors.push(index);
             }
@@ -576,7 +664,7 @@ function addEntryRow(entryType) {
     tbody.appendChild(clone);
 
     // Update dropdowns for the new row (force rebuild to populate new row's selects).
-    updateAccountDropdowns(true);
+    updateAccountDropdowns(true, true);
     updateDebitamountState(nextEntryIndex);
     updateWeightStates(nextEntryIndex);
 
@@ -766,8 +854,9 @@ function syncAllDisplayToHidden() {
  * Update account dropdowns based on selected chart.
  *
  * @param {boolean} forceRebuild Whether to force rebuild even if chart hasn't changed.
+ * @param {boolean} preserveMissing Whether to retain unavailable selections and their amounts.
  */
-function updateAccountDropdowns(forceRebuild) {
+function updateAccountDropdowns(forceRebuild, preserveMissing = false) {
     const chartId = chartSelect ? chartSelect.value : '0';
     const accounts = accountsByChart[chartId] || {};
 
@@ -783,6 +872,7 @@ function updateAccountDropdowns(forceRebuild) {
 
     debitSelects.forEach(function (select) {
         const currentValue = select.value;
+        const currentOption = select.selectedOptions[0];
         // Keep first option (placeholder).
         while (select.options.length > 1) {
             select.remove(1);
@@ -794,12 +884,18 @@ function updateAccountDropdowns(forceRebuild) {
             select.add(option);
         }
         if (currentValue) {
+            if (preserveMissing && !Object.prototype.hasOwnProperty.call(accounts, currentValue)) {
+                currentOption.dataset.unavailable = 'true';
+                select.add(currentOption);
+            }
             select.value = currentValue;
         }
+        checkOptionAvailability(select);
     });
 
     creditSelects.forEach(function (select) {
         const currentValue = select.value;
+        const currentOption = select.selectedOptions[0];
         while (select.options.length > 1) {
             select.remove(1);
         }
@@ -810,8 +906,13 @@ function updateAccountDropdowns(forceRebuild) {
             select.add(option);
         }
         if (currentValue) {
+            if (preserveMissing && !Object.prototype.hasOwnProperty.call(accounts, currentValue)) {
+                currentOption.dataset.unavailable = 'true';
+                select.add(currentOption);
+            }
             select.value = currentValue;
         }
+        checkOptionAvailability(select);
     });
 
     updateAllDebitamountStates();

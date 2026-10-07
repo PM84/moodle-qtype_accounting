@@ -200,7 +200,12 @@ $string['importdate'] = 'Importdatum';
 $string['uploadchartcsv'] = 'Kontenplan hochladen (CSV)';
 $string['uploadchartcsv_btn'] = 'Hochladen';
 $string['uploadchartcsv_help'] = 'Laden Sie eine Textdatei hoch, um einen neuen Kontenplan für diesen Kurs zu erstellen. Der Kontenplan erscheint sofort nach dem Hochladen in der Auswahlliste. Format: eine Kontobezeichnung pro Zeile.';
-$string['saveandcontinue'] = 'Speichern und weiter';
+$string['managechartslink'] = 'Kontenpläne verwalten';
+$string['refreshcharts'] = 'Kontenpläne aktualisieren';
+$string['refreshchartsdone'] = 'Kontenpläne aktualisiert.';
+$string['refreshchartsfailed'] = 'Die Kontenpläne konnten nicht aktualisiert werden. Bitte versuchen Sie es erneut. Ihre Eingaben wurden beibehalten.';
+$string['refreshchartsmissing'] = 'Kontenpläne aktualisiert. Ein ausgewählter Kontenplan oder ein Konto ist nicht mehr verfügbar. Ihre Eingaben wurden beibehalten; bitte wählen Sie vor dem Speichern einen Ersatz.';
+$string['err_accountunavailable'] = 'Dieser Kontenplan oder dieses Konto ist nicht mehr verfügbar. Bitte wählen Sie einen Ersatz.';
 
 // Mobile-Ansicht.
 $string['debitentries'] = 'Sollbuchungen';

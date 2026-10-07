@@ -200,7 +200,12 @@ $string['importdate'] = 'Import date';
 $string['uploadchartcsv'] = 'Upload Chart of Accounts (CSV)';
 $string['uploadchartcsv_btn'] = 'Upload';
 $string['uploadchartcsv_help'] = 'Upload a text file to create a new chart of accounts for this course. The chart will appear in the dropdown immediately after upload. Format: one account name per line.';
-$string['saveandcontinue'] = 'Save and continue';
+$string['managechartslink'] = 'Manage chart of accounts';
+$string['refreshcharts'] = 'Refresh charts of accounts';
+$string['refreshchartsdone'] = 'Charts of accounts updated.';
+$string['refreshchartsfailed'] = 'Charts of accounts could not be updated. Please try again. Your entries have been preserved.';
+$string['refreshchartsmissing'] = 'Charts updated. A selected chart or account is no longer available. Your entries have been preserved; please choose a replacement before saving.';
+$string['err_accountunavailable'] = 'This chart or account is no longer available. Please choose a replacement.';
 
 // Mobile view.
 $string['debitentries'] = 'Debit Entries';

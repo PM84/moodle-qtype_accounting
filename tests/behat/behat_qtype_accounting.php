@@ -35,4 +35,21 @@ use Behat\Mink\Exception\ExpectationException;
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class behat_qtype_accounting extends behat_base {
+    /**
+     * Create chart options for question editor scenarios.
+     *
+     * @Given /^the accounting chart "([^"]*)" with accounts "([^"]*)" exists in course "([^"]*)"$/
+     * @param string $name Chart name.
+     * @param string $accounts Comma-separated account names.
+     * @param string $coursename Course full name.
+     */
+    public function accounting_chart_exists(string $name, string $accounts, string $coursename): void {
+        global $DB;
+        $course = $DB->get_record('course', ['fullname' => $coursename], '*', MUST_EXIST);
+        $context = context_course::instance($course->id);
+        $chartid = \qtype_accounting\chart_manager::create_chart($name, $context->id);
+        foreach (explode(',', $accounts) as $account) {
+            \qtype_accounting\account_manager::add($chartid, trim($account));
+        }
+    }
 }

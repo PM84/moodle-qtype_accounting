@@ -140,29 +140,61 @@ class qtype_accounting_edit_form extends question_edit_form {
      * @param \MoodleQuickForm $mform The form being built.
      */
     protected function add_chart_section($mform): void {
+        global $OUTPUT;
+
         $charts = $this->get_available_charts();
-        $mform->addElement(
+        $select = $mform->createElement(
             'select',
             'chartofaccountsid',
-            get_string('chartofaccounts', 'qtype_accounting'),
-            $charts
+            '',
+            $charts,
+            [
+                'id' => 'id_chartofaccountsid',
+                'aria-label' => get_string('chartofaccounts', 'qtype_accounting'),
+            ]
         );
-        $mform->setType('chartofaccountsid', PARAM_INT);
-        $mform->addHelpButton('chartofaccountsid', 'chartofaccounts', 'qtype_accounting');
-
+        $elements = [
+            $mform->createElement('html', html_writer::tag('label', get_string('chartofaccounts', 'qtype_accounting'), [
+                'for' => 'id_chartofaccountsid',
+                'class' => 'accesshide',
+            ])),
+            $select,
+        ];
         $coursecontext = $this->context->get_course_context(false);
+        if ($coursecontext) {
+            $elements[] = $mform->createElement('html', html_writer::tag(
+                'button',
+                $OUTPUT->pix_icon('i/reload', '') . get_string('refreshcharts', 'qtype_accounting'),
+                [
+                    'type' => 'button',
+                    'id' => 'qtype_accounting-refresh-charts',
+                    'class' => 'btn btn-secondary btn-sm mx-2',
+                ]
+            ) . html_writer::span('', '', [
+                'id' => 'qtype_accounting-refresh-status',
+                'role' => 'status',
+                'aria-live' => 'polite',
+            ]));
+        }
+        $mform->addGroup($elements, 'chartofaccountsgroup', get_string('chartofaccounts', 'qtype_accounting'), ' ', false);
+        $mform->setType('chartofaccountsid', PARAM_INT);
+        $mform->addHelpButton('chartofaccountsgroup', 'chartofaccounts', 'qtype_accounting');
+
         if (!$coursecontext) {
             return;
         }
         $manageurl = new moodle_url(
             '/question/type/accounting/manage_charts.php',
-            ['courseid' => $coursecontext->instanceid, 'returnurl' => qualified_me()]
+            ['courseid' => $coursecontext->instanceid]
         );
         $mform->addElement(
             'static',
             'managecharts_link',
             '',
-            html_writer::link($manageurl, get_string('managecharts', 'qtype_accounting'))
+            html_writer::link($manageurl, get_string('managechartslink', 'qtype_accounting'), [
+                'target' => '_blank',
+                'rel' => 'noopener',
+            ])
         );
     }
 
@@ -225,12 +257,11 @@ class qtype_accounting_edit_form extends question_edit_form {
         }
 
         $coursecontext = $this->context->get_course_context(false);
-        $coursecontextid = $coursecontext ? $coursecontext->id : 0;
         $jsdata = [
             'accounts' => $allaccounts,
             'chartId' => $currentchartid,
             'entries' => $existingentries,
-            'courseId' => $coursecontextid,
+            'courseId' => $coursecontext ? $coursecontext->instanceid : 0,
             'numberFormat' => $effectiveformat,
         ];
         $mform->addElement('html', '<script type="application/json" id="qtype_accounting-editform-data">' .
@@ -239,6 +270,9 @@ class qtype_accounting_edit_form extends question_edit_form {
         $PAGE->requires->string_for_js('err_balancemismatch', 'qtype_accounting');
         $PAGE->requires->string_for_js('err_debitaccountrequired', 'qtype_accounting');
         $PAGE->requires->string_for_js('err_creditaccountrequired', 'qtype_accounting');
+        $PAGE->requires->strings_for_js([
+            'refreshchartsdone', 'refreshchartsfailed', 'refreshchartsmissing', 'err_accountunavailable',
+        ], 'qtype_accounting');
         $PAGE->requires->js_call_amd('qtype_accounting/editform', 'init', []);
     }
 
@@ -437,7 +471,37 @@ class qtype_accounting_edit_form extends question_edit_form {
         if ((int)($data['accountsindropdown'] ?? 0) < 0) {
             $errors['accountsindropdown'] = get_string('err_accountsindropdown_negative', 'qtype_accounting');
         }
+        $errors = $this->validate_available_accounts($data, $errors);
         return (new \qtype_accounting\entry_validator())->validate($data, $errors);
+    }
+
+    /**
+     * Reject charts or accounts deleted while the editor was open.
+     *
+     * @param array $data Submitted question data.
+     * @param array $errors Existing validation errors.
+     * @return array Validation errors.
+     */
+    protected function validate_available_accounts(array $data, array $errors): array {
+        global $DB;
+
+        $chartid = (int)($data['chartofaccountsid'] ?? 0);
+        $charts = $this->get_available_charts();
+        if (!array_key_exists($chartid, $charts)) {
+            $errors['chartofaccountsid'] = get_string('err_accountunavailable', 'qtype_accounting');
+            return $errors;
+        }
+        $accountids = array_filter(array_map('intval', array_merge(
+            $data['debitaccount'] ?? [],
+            $data['creditaccount'] ?? []
+        )));
+        if ($accountids) {
+            $available = $DB->get_records('qtype_accounting_accounts', ['chartid' => $chartid], '', 'id');
+            if (array_diff($accountids, array_keys($available))) {
+                $errors['balancevalidation'] = get_string('err_accountunavailable', 'qtype_accounting');
+            }
+        }
+        return $errors;
     }
 
     /**

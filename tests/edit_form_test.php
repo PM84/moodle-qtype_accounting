@@ -29,8 +29,36 @@ require_once($CFG->dirroot . '/question/type/accounting/edit_accounting_form.php
  * @copyright  2026 Hochschule Flensburg / lambda9
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  * @covers     \qtype_accounting_edit_form::get_all_accounts_by_chart
+ * @covers     \qtype_accounting_edit_form::validate_available_accounts
  */
 final class edit_form_test extends \advanced_testcase {
+    /**
+     * Reject stale chart IDs and accounts that no longer belong to the selected chart.
+     */
+    public function test_stale_account_validation(): void {
+        $this->resetAfterTest();
+        $course = $this->getDataGenerator()->create_course();
+        $context = \context_course::instance($course->id);
+        $chartid = chart_manager::create_chart('Main', $context->id);
+        $accountid = account_manager::add($chartid, 'Bank');
+        $otherchartid = chart_manager::create_chart('Other', $context->id);
+        $otheraccountid = account_manager::add($otherchartid, 'Cash');
+        $form = $this->getMockBuilder(\qtype_accounting_edit_form::class)
+            ->disableOriginalConstructor()->onlyMethods([])->getMock();
+        $form->context = $context;
+        $method = new \ReflectionMethod(\qtype_accounting_edit_form::class, 'validate_available_accounts');
+        $method->setAccessible(true);
+        $data = ['chartofaccountsid' => $chartid, 'debitaccount' => [$accountid]];
+        $this->assertSame([], $method->invoke($form, $data, []));
+        $data['creditaccount'] = [$otheraccountid];
+        $this->assertArrayHasKey('balancevalidation', $method->invoke($form, $data, []));
+        unset($data['creditaccount']);
+        account_manager::delete($accountid);
+        $this->assertArrayHasKey('balancevalidation', $method->invoke($form, $data, []));
+        chart_manager::delete_chart($chartid);
+        $this->assertArrayHasKey('chartofaccountsid', $method->invoke($form, $data, []));
+    }
+
     /**
      * Read the account data without constructing the unrelated form UI.
      *
