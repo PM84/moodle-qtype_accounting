@@ -219,12 +219,20 @@ class chart_manager {
         $requiredaccounts = array_keys($accounts);
         sort($requiredaccounts);
 
+        $chartaccounts = $DB->get_records_list(
+            'qtype_accounting_accounts',
+            'chartid',
+            array_keys($charts),
+            '',
+            'id, chartid, accountname'
+        );
+        $accountsbychart = [];
+        foreach ($chartaccounts as $account) {
+            $accountsbychart[$account->chartid][] = $account->accountname;
+        }
+
         foreach ($charts as $chart) {
-            $chartaccounts = $DB->get_records('qtype_accounting_accounts', ['chartid' => $chart->id]);
-            $chartaccountnames = [];
-            foreach ($chartaccounts as $acc) {
-                $chartaccountnames[] = $acc->accountname;
-            }
+            $chartaccountnames = $accountsbychart[$chart->id] ?? [];
             sort($chartaccountnames);
 
             // Check if this chart contains all required accounts.

@@ -300,22 +300,22 @@ class qtype_accounting_edit_form extends question_edit_form {
     protected function get_all_accounts_by_chart(): array {
         global $DB;
 
-        $result = [];
         $charts = $this->get_available_charts();
+        $chartids = array_diff(array_keys($charts), [0]);
+        $result = array_fill_keys($chartids, []);
+        if (!$chartids) {
+            return $result;
+        }
 
-        foreach (array_keys($charts) as $chartid) {
-            if ($chartid == 0) {
-                continue;
-            }
-            $accounts = $DB->get_records(
-                'qtype_accounting_accounts',
-                ['chartid' => $chartid],
-                'accountname'
-            );
-            $result[$chartid] = [];
-            foreach ($accounts as $account) {
-                $result[$chartid][$account->id] = $account->accountname;
-            }
+        $accounts = $DB->get_records_list(
+            'qtype_accounting_accounts',
+            'chartid',
+            $chartids,
+            'accountname',
+            'id, chartid, accountname'
+        );
+        foreach ($accounts as $account) {
+            $result[$account->chartid][$account->id] = $account->accountname;
         }
 
         return $result;

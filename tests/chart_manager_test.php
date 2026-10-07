@@ -207,6 +207,51 @@ class chart_manager_test extends \advanced_testcase {
     }
 
     /**
+     * Check multiple candidates, context isolation, case sensitivity, and empty requirements.
+     */
+    public function test_find_matching_chart_multiple_candidates(): void {
+        $this->resetAfterTest();
+        $contextid = \context_system::instance()->id;
+        $emptychart = chart_manager::create_chart('Candidates', $contextid);
+        $partialchart = chart_manager::create_chart('Candidates', $contextid);
+        account_manager::add($partialchart, 'Bank');
+        $fullchart = chart_manager::create_chart('Candidates', $contextid);
+        account_manager::add($fullchart, 'Bank');
+        account_manager::add($fullchart, 'Sales');
+        account_manager::add($fullchart, 'Extra');
+        $course = $this->getDataGenerator()->create_course();
+        $othercontextid = \context_course::instance($course->id)->id;
+        $otherchart = chart_manager::create_chart('Candidates', $othercontextid);
+        account_manager::add($otherchart, 'Bank');
+        account_manager::add($otherchart, 'Sales');
+
+        $required = ['Bank' => [], 'Sales' => []];
+        $this->assertEquals($fullchart, chart_manager::find_matching_chart_in_context('Candidates', $contextid, $required));
+        $this->assertEquals($otherchart, chart_manager::find_matching_chart_in_context('Candidates', $othercontextid, $required));
+        $this->assertNull(chart_manager::find_matching_chart_in_context('Candidates', $contextid, ['bank' => []]));
+        $this->assertNull(chart_manager::find_matching_chart_in_context('Candidates', $contextid, ['Missing' => []]));
+        $this->assertEquals($emptychart, chart_manager::find_matching_chart_in_context('Candidates', $contextid, []));
+    }
+
+    /**
+     * The number of reads must not grow with the number of candidate charts.
+     */
+    public function test_find_matching_chart_uses_bounded_reads(): void {
+        global $DB;
+        $this->resetAfterTest();
+        $contextid = \context_system::instance()->id;
+        for ($i = 0; $i < 10; $i++) {
+            $chartid = chart_manager::create_chart('Candidates', $contextid);
+            account_manager::add($chartid, 'Bank');
+        }
+        $before = $DB->perf_get_reads();
+        $match = chart_manager::find_matching_chart_in_context('Candidates', $contextid, ['Missing' => []]);
+        $reads = $DB->perf_get_reads() - $before;
+        $this->assertNull($match);
+        $this->assertEquals(2, $reads);
+    }
+
+    /**
      * Test duplicating a chart to a new context.
      */
     public function test_duplicate_chart(): void {
