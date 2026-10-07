@@ -77,7 +77,7 @@ After submission, every field is highlighted individually — green for correct,
 - **Number format toggle** — `1,234.56` (US) or `1.234,56` (DE).
 - Course-scoped charts of accounts, manageable directly from the question form.
 - Chart management opens in a new tab. Return to the question and use **Refresh charts of accounts** to update the dropdowns while keeping unsaved entries. Removed selections are flagged for replacement before saving.
-- CSV import and export of charts of accounts (one account per line; UTF-8 or Windows-1252).
+- Create charts of accounts directly in Moodle, or import and export CSV files (one account per line; UTF-8 or Windows-1252).
 - Question import and export through Moodle's standard XML format, with the embedded chart of accounts travelling with the question.
 - Backup and restore as part of a course's question bank.
 
@@ -115,7 +115,7 @@ The plugin has no admin settings page — all configuration is per-question, and
 
 1. In any course, create or open a quiz.
 2. **Add → A new question → Accounting Entry (Buchungssatz)**.
-3. In the question form, click **Manage Charts of Accounts** to create your first chart for the course (or upload one as a CSV). Each line of the CSV is one account name, e.g.:
+3. In the question form, click **Manage Charts of Accounts**, enter a chart name, and click **Create chart of accounts**. Add accounts in the editor that opens, or upload a CSV instead. Each line of the CSV is one account name, e.g.:
    ```
    1200 Bank
    1400 Receivables
@@ -157,6 +157,7 @@ You reach the management page from within the question authoring form: when you 
 
 On the management page you can:
 
+- **Create a chart directly** by entering its name. The account editor opens so you can add accounts without preparing a file.
 - **Upload a CSV** to create a new chart. The filename becomes the chart name; one account per line.
 - **Edit** a chart to rename it and add, edit, delete, or reorder accounts.
 - **Download** any chart as CSV.

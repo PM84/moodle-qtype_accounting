@@ -113,6 +113,8 @@ $string['err_debitaccountrequired'] = 'Bitte wählen Sie ein Konto aus oder entf
 $string['err_creditaccountrequired'] = 'Bitte wählen Sie ein Konto aus oder entfernen Sie diesen Eintrag.';
 
 // Kontenplanverwaltung.
+$string['createchart'] = 'Kontenplan erstellen';
+$string['createchart_help'] = 'Geben Sie einen Namen ein, um einen leeren Kontenplan zu erstellen. Anschließend können Sie Konten direkt in Moodle hinzufügen oder aus einer CSV-Datei importieren.';
 $string['managecharts'] = 'Kontenpläne verwalten';
 $string['addchart'] = 'Neuen Kontenplan hinzufügen';
 $string['editchart'] = 'Kontenplan bearbeiten';

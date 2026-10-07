@@ -1,8 +1,8 @@
 @qtype @qtype_accounting @javascript
-Feature: Confirm chart of accounts deletion
+Feature: Manage charts of accounts
   As a teacher
-  I need to review the consequences before deleting a chart of accounts
-  So that I do not accidentally break questions that use it
+  I need to create charts directly and review the consequences before deleting them
+  So that I can manage accounts without uploading files or accidentally breaking questions
 
   Background:
     Given the following "users" exist:
@@ -21,6 +21,31 @@ Feature: Confirm chart of accounts deletion
     And I click on "Add" "button" in the "Choose a question type to add" "dialogue"
     And I click on "Manage chart of accounts" "link"
     And I switch to a second window
+
+  Scenario: Create a chart directly and add accounts without uploading a file
+    When I set the field "Chart name" to "Manual chart"
+    And I press "Create chart of accounts"
+    Then I should see "Chart of accounts created successfully."
+    And I should see "Manual chart"
+    And I should see "No accounts in this chart yet."
+    When I set the field "accountname" to "1200 Bank"
+    And I press "Add Account"
+    Then I should see "Account added successfully."
+    And I should see "1200 Bank"
+    When I set the field "accountname" to "1000 Cash"
+    And I press "Add Account"
+    And I click on "Manage Charts of Accounts" "link"
+    Then I should see "2" in the "Manual chart" "table_row"
+    When I click on "Manual chart" "link"
+    Then I should see "1200 Bank"
+    And I should see "1000 Cash"
+
+  Scenario: A chart name is required for direct creation
+    When I set the field "Chart name" to "   "
+    And I press "Create chart of accounts"
+    Then I should see "Required"
+    And "Main" "link" should exist
+    And I should not see "Chart of accounts created successfully."
 
   Scenario: Cancelling deletion preserves the chart and its accounts
     When I click on "Delete" "link" in the "Main" "table_row"

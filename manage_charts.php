@@ -121,6 +121,20 @@ if ($action === 'export' && $chartid) {
     exit;
 }
 
+// Create an empty chart, then open the existing editor to add accounts.
+$createform = new \qtype_accounting\form\chart_create_form($baseurl);
+if ($data = $createform->get_data()) {
+    $newchartid = chart_manager::create_chart(trim($data->chartname), $context->id);
+    $editurl = new moodle_url('/question/type/accounting/edit_chart.php', [
+        'courseid' => $courseid,
+        'chartid' => $newchartid,
+    ]);
+    if ($returnurl !== '') {
+        $editurl->param('returnurl', $returnurl);
+    }
+    redirect($editurl, get_string('chartcreated', 'qtype_accounting'), null, \core\output\notification::NOTIFY_SUCCESS);
+}
+
 // Handle CSV upload via Moodle filepicker form.
 $uploadform = new qtype_accounting_chart_upload_form($baseurl);
 if ($data = $uploadform->get_data()) {
@@ -161,7 +175,10 @@ $PAGE->requires->js_call_amd('qtype_accounting/manage_charts', 'init');
 echo $OUTPUT->header();
 echo $OUTPUT->heading(get_string('managecharts', 'qtype_accounting'));
 
-// Upload section first.
+// Create and upload sections.
+echo $OUTPUT->heading(get_string('createchart', 'qtype_accounting'), 3);
+$createform->display();
+
 echo $OUTPUT->heading(get_string('uploadchartcsv', 'qtype_accounting'), 3);
 $uploadform->display();
 

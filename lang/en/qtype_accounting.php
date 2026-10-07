@@ -130,6 +130,8 @@ $string['privacy:metadata:qtype_accounting_charts:usermodified'] = 'The ID of th
 $string['accounting:managecharts'] = 'Manage charts of accounts';
 
 // Chart management.
+$string['createchart'] = 'Create chart of accounts';
+$string['createchart_help'] = 'Enter a name to create an empty chart of accounts. You can then add accounts directly in Moodle or import them from a CSV file.';
 $string['nocharts'] = 'No charts of accounts have been created yet.';
 $string['accounts'] = 'Accounts';
 $string['chartcreated'] = 'Chart of accounts created successfully.';
