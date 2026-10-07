@@ -508,9 +508,12 @@ function validateAccounts() {
  */
 function showAccountError(field, stringKey) {
     var errorSpan = document.createElement('span');
-    errorSpan.className = 'qtype_accounting-account-error text-danger d-block mt-1';
-    errorSpan.style.fontSize = '0.875rem';
+    errorSpan.className = 'qtype_accounting-account-error form-control-feedback invalid-feedback d-block';
+    errorSpan.id = 'qtype_accounting-error-' + field.name.replace(/[^a-z0-9_-]/gi, '_');
     errorSpan.textContent = M.util.get_string(stringKey, 'qtype_accounting');
+    field.classList.add('is-invalid');
+    field.setAttribute('aria-invalid', 'true');
+    field.setAttribute('aria-describedby', errorSpan.id);
     field.parentNode.appendChild(errorSpan);
 }
 
@@ -520,6 +523,12 @@ function showAccountError(field, stringKey) {
 function clearAccountErrors() {
     var existing = document.querySelectorAll('.qtype_accounting-account-error');
     existing.forEach(function (el) {
+        const field = el.parentNode.querySelector('[aria-describedby="' + el.id + '"]');
+        if (field) {
+            field.classList.remove('is-invalid');
+            field.removeAttribute('aria-invalid');
+            field.removeAttribute('aria-describedby');
+        }
         el.remove();
     });
 }
@@ -580,7 +589,7 @@ function showBalanceError() {
     }
     var errorDiv = document.createElement('div');
     errorDiv.id = 'qtype_accounting-balance-error';
-    errorDiv.className = 'alert alert-danger mt-2';
+    errorDiv.className = 'form-control-feedback invalid-feedback d-block mt-2';
     errorDiv.setAttribute('role', 'alert');
     errorDiv.textContent = M.util.get_string('err_balancemismatch', 'qtype_accounting');
     table.parentNode.insertBefore(errorDiv, table.nextSibling);
@@ -647,6 +656,9 @@ function addEntryRow(entryType) {
     });
     clone.querySelectorAll('[name*="__INDEX__"]').forEach(function (el) {
         el.name = el.name.replace('__INDEX__', nextEntryIndex);
+    });
+    clone.querySelectorAll('[id*="__INDEX__"]').forEach(function (el) {
+        el.id = el.id.replace('__INDEX__', nextEntryIndex);
     });
 
     // Set the entry type on the entry row.

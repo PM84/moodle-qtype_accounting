@@ -228,13 +228,15 @@ class qtype_accounting_edit_form extends question_edit_form {
         // Default to 2 entries for new questions, otherwise use the number of existing entries.
         $entrycount = count($existingentries) > 0 ? count($existingentries) : 2;
 
-        $mform->addElement('html', $this->build_entries_table(
+        $table = $mform->createElement('html', $this->build_entries_table(
             $debitaccountoptions,
             $creditaccountoptions,
             $entrycount,
             $existingentries,
             $effectiveformat
         ));
+        $table->setName('entrytable');
+        $mform->addElement($table);
 
         // Hidden fields for form element registration; populated via JS on submit.
         for ($i = 0; $i < 20; $i++) {
@@ -264,8 +266,10 @@ class qtype_accounting_edit_form extends question_edit_form {
             'courseId' => $coursecontext ? $coursecontext->instanceid : 0,
             'numberFormat' => $effectiveformat,
         ];
-        $mform->addElement('html', '<script type="application/json" id="qtype_accounting-editform-data">' .
+        $config = $mform->createElement('html', '<script type="application/json" id="qtype_accounting-editform-data">' .
             json_encode($jsdata, JSON_HEX_TAG | JSON_HEX_AMP) . '</script>');
+        $config->setName('entryconfig');
+        $mform->addElement($config);
 
         $PAGE->requires->string_for_js('err_balancemismatch', 'qtype_accounting');
         $PAGE->requires->string_for_js('err_debitaccountrequired', 'qtype_accounting');
@@ -274,6 +278,54 @@ class qtype_accounting_edit_form extends question_edit_form {
             'refreshchartsdone', 'refreshchartsfailed', 'refreshchartsmissing', 'err_accountunavailable',
         ], 'qtype_accounting');
         $PAGE->requires->js_call_amd('qtype_accounting/editform', 'init', []);
+    }
+
+    /**
+     * Restore the custom controls after QuickForm has processed a submission.
+     *
+     * Unlike registered form elements, raw HTML does not retain submitted values.
+     */
+    public function definition_after_data() {
+        parent::definition_after_data();
+        $mform = $this->_form;
+        if (!$mform->isSubmitted()) {
+            return;
+        }
+        $this->update_submitted_entries($mform->getSubmitValues());
+    }
+
+    /**
+     * Render submitted controls with field errors using Moodle's normal error styling.
+     *
+     * @param array $data Submitted values.
+     * @param array $errors Validation errors keyed by field name.
+     */
+    protected function update_submitted_entries(array $data, array $errors = []): void {
+        $mform = $this->_form;
+        $entries = (new \qtype_accounting\entries_table_builder())->get_submitted_entries($data, $errors);
+        $chartid = (int)($data['chartofaccountsid'] ?? 0);
+        $format = $data['numberformat'] ?? 'de';
+        $allaccounts = $this->get_all_accounts_by_chart();
+        $accounts = $allaccounts[$chartid] ?? [];
+        $mform->getElement('entrytable')->setValue($this->build_entries_table(
+            ['' => get_string('noaccountselected', 'qtype_accounting')] + $accounts,
+            ['' => get_string('selectaccount', 'qtype_accounting')] + $accounts,
+            max(1, count($entries)),
+            $entries,
+            $format
+        ));
+        $coursecontext = $this->context->get_course_context(false);
+        $config = [
+            'accounts' => $allaccounts,
+            'chartId' => $chartid,
+            'entries' => $entries,
+            'courseId' => $coursecontext ? $coursecontext->instanceid : 0,
+            'numberFormat' => $format,
+        ];
+        $mform->getElement('entryconfig')->setValue(
+            '<script type="application/json" id="qtype_accounting-editform-data">' .
+            json_encode($config, JSON_HEX_TAG | JSON_HEX_AMP) . '</script>'
+        );
     }
 
     /**
@@ -472,7 +524,9 @@ class qtype_accounting_edit_form extends question_edit_form {
             $errors['accountsindropdown'] = get_string('err_accountsindropdown_negative', 'qtype_accounting');
         }
         $errors = $this->validate_available_accounts($data, $errors);
-        return (new \qtype_accounting\entry_validator())->validate($data, $errors);
+        $errors = (new \qtype_accounting\entry_validator())->validate($data, $errors);
+        $this->update_submitted_entries($data, $errors);
+        return $errors;
     }
 
     /**

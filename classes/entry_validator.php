@@ -50,8 +50,9 @@ class entry_validator {
         $creditaccountarray = $data['creditaccount'] ?? [];
         $allindices = array_unique(array_merge(array_keys($debitaccountarray), array_keys($creditaccountarray)));
 
-        $errors = $this->validate_completeness($data, $allindices, $errors);
-        return $this->validate_balance($data, $allindices, $errors);
+        $entryerrors = $this->validate_completeness($data, $allindices, []);
+        $entryerrors = $this->validate_balance($data, $allindices, $entryerrors);
+        return array_merge($errors, $entryerrors);
     }
 
     /**
@@ -137,18 +138,12 @@ class entry_validator {
      * @return array Errors after this check.
      */
     protected function validate_balance(array $data, array $allindices, array $errors): array {
-        $numberformat = $data['numberformat'] ?? 'de';
         $totaldebit = 0.0;
         $totalcredit = 0.0;
         foreach ($allindices as $i) {
-            $totaldebit += amount_helper::parse_amount(
-                trim($data['debitamount'][$i] ?? ''),
-                $numberformat
-            );
-            $totalcredit += amount_helper::parse_amount(
-                trim($data['creditamount'][$i] ?? ''),
-                $numberformat
-            );
+            // JavaScript submits plain decimal numbers, regardless of the display format.
+            $totaldebit += (float)($data['debitamount'][$i] ?? 0);
+            $totalcredit += (float)($data['creditamount'][$i] ?? 0);
         }
         if (abs($totaldebit - $totalcredit) > 0.001) {
             $errors['balancevalidation'] = get_string('err_balancemismatch', 'qtype_accounting');

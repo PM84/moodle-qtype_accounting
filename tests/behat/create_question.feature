@@ -90,6 +90,49 @@ Feature: Create and edit Buchungssatz questions
     Then I should see "Add Debit Entry"
     When I click on "Add Debit Entry" "button"
     Then ".qtype_accounting-entry-row" "css_element" should exist
+    And "#id_debitamount_display_2" "css_element" should exist
+
+  @javascript
+  Scenario Outline: Missing solution amounts show guidance and preserve selections after saving
+    Given the accounting chart "Main" with accounts "Bank, Cash" exists in course "Course 1"
+    And I am on the "Course 1" "core_question > course question bank" page logged in as "teacher1"
+    When I press "Create a new question ..."
+    And I set the field "Accounting Entry" to "1"
+    And I click on "Add" "button" in the "Choose a question type to add" "dialogue"
+    And I set the field "Question name" to "Missing solution amounts"
+    And I set the field "Question text" to "Record the transaction."
+    And I set the field "Number format" to "<format>"
+    And I set the field "Chart of Accounts" to "Main"
+    And I set the field "debitaccount_display[0]" to "Bank"
+    And I set the field "creditaccount_display[0]" to "Cash"
+    And I set the field "debitaccount_display[1]" to "Bank"
+    And I set the field "creditaccount_display[1]" to "Cash"
+    And I set the field "weight_debitaccount_display[0]" to "3"
+    And I press "id_submitbutton"
+    Then I should see "Debit amount is required when a debit account is selected."
+    And I should see "Credit amount is required."
+    And "input[name='debitamount_display[0]'].is-invalid" "css_element" should exist
+    And "input[name='creditamount_display[0]'].is-invalid" "css_element" should exist
+    And "#id_debitamount_display_0_error.form-control-feedback.invalid-feedback" "css_element" should exist
+    And "#id_creditamount_display_0_error.form-control-feedback.invalid-feedback" "css_element" should exist
+    And the field "Chart of Accounts" matches value "Main"
+    And the field "debitaccount_display[0]" matches value "Bank"
+    And the field "creditaccount_display[0]" matches value "Cash"
+    And the field "debitaccount_display[1]" matches value "Bank"
+    And the field "creditaccount_display[1]" matches value "Cash"
+    And the field "weight_debitaccount_display[0]" matches value "3"
+    When I set the field "debitamount_display[0]" to "<amount>"
+    And I set the field "creditamount_display[0]" to "<amount>"
+    And I set the field "debitamount_display[1]" to "<amount>"
+    And I set the field "creditamount_display[1]" to "<amount>"
+    And I press "id_submitbutton"
+    Then I should see "Missing solution amounts"
+    And I should not see "Adding an Accounting Entry question"
+
+    Examples:
+      | format   | amount |
+      | #.###,00 | 12,50  |
+      | #,###.00 | 12.50  |
 
   @javascript
   Scenario: Refresh chart options after managing accounts in a new tab

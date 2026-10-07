@@ -37,6 +37,42 @@ namespace qtype_accounting;
  */
 class entries_table_builder {
     /**
+     * Convert submitted hidden fields to the entries used by the custom table.
+     *
+     * Amounts in hidden fields have already been normalised by JavaScript.
+     *
+     * @param array $data Submitted form values.
+     * @param array $errors Validation errors keyed by the original submitted field names.
+     * @return array Entries in submitted order, omitting deleted or unused rows.
+     */
+    public function get_submitted_entries(array $data, array $errors = []): array {
+        $indices = array_unique(array_merge(
+            array_keys($data['debitaccount'] ?? []),
+            array_keys($data['creditaccount'] ?? [])
+        ));
+        $entries = [];
+        foreach ($indices as $index) {
+            $entry = new \stdClass();
+            foreach (['debit', 'credit'] as $side) {
+                $entry->{$side . 'accountid'} = (int)($data[$side . 'account'][$index] ?? 0);
+                $entry->{$side . 'amount'} = $data[$side . 'amount'][$index] ?? '';
+                $entry->{$side . 'amounterror'} = $errors[$side . 'amount[' . $index . ']'] ?? '';
+                foreach (['account', 'amount'] as $field) {
+                    $name = 'weight_' . $side . $field;
+                    $entry->$name = (int)($data[$name][$index] ?? 1);
+                }
+            }
+            if (
+                $entry->debitaccountid || $entry->creditaccountid ||
+                $entry->debitamount !== '' || $entry->creditamount !== ''
+            ) {
+                $entries[] = $entry;
+            }
+        }
+        return $entries;
+    }
+
+    /**
      * Build the entries table HTML (header + body + footer controls + clone template).
      *
      * @param array $debitaccountoptions Options for debit account select.
@@ -201,8 +237,8 @@ class entries_table_builder {
         $credithidden = $hiddenclasses['credit'];
         $debitaccount = $entry->debitaccountid ?? '';
         $creditaccount = $entry->creditaccountid ?? '';
-        $debitamount = $this->format_amount((float)($entry->debitamount ?? 0), $numberformat);
-        $creditamount = $this->format_amount((float)($entry->creditamount ?? 0), $numberformat);
+        $debitamount = $this->format_entry_amount($entry, 'debit', $numberformat);
+        $creditamount = $this->format_entry_amount($entry, 'credit', $numberformat);
         $placeholder = ($numberformat === 'us') ? '0.00' : '0,00';
 
         $debitselecthtml = '<select name="debitaccount_display[' . $index . ']"'
@@ -219,23 +255,51 @@ class entries_table_builder {
         $html .= '<td class="qtype_accounting-edit-label' . $debithidden . '"></td>';
         $html .= '<td class="qtype_accounting-edit-data' . $debithidden . '">' . $debitselecthtml . '</td>';
         $html .= '<td class="qtype_accounting-edit-data' . $debithidden . '">';
-        $html .= '<input type="text" name="debitamount_display[' . $index . ']" value="' . s($debitamount) . '" ';
-        $html .= 'class="form-control qtype_accounting-debitamount" data-index="' . $index
-            . '" placeholder="' . $placeholder . '">';
+        $html .= $this->build_amount_input($index, 'debit', $debitamount, $placeholder, $entry->debitamounterror ?? '');
         $html .= '</td>';
         $html .= '<td class="qtype_accounting-edit-label' . $debithidden . '">';
         $html .= entry_helper::render_delete_button('debit', $index, 'data-index');
         $html .= '</td>';
         $html .= '<td class="qtype_accounting-edit-data' . $credithidden . '">' . $creditselecthtml . '</td>';
         $html .= '<td class="qtype_accounting-edit-data' . $credithidden . '">';
-        $html .= '<input type="text" name="creditamount_display[' . $index . ']" value="' . s($creditamount) . '" ';
-        $html .= 'class="form-control qtype_accounting-creditamount" data-index="' . $index
-            . '" placeholder="' . $placeholder . '">';
+        $html .= $this->build_amount_input($index, 'credit', $creditamount, $placeholder, $entry->creditamounterror ?? '');
         $html .= '</td>';
         $html .= '<td class="qtype_accounting-edit-actions' . $credithidden . '">';
         $html .= entry_helper::render_delete_button('credit', $index, 'data-index');
         $html .= '</td>';
         $html .= '</tr>';
+        return $html;
+    }
+
+    /**
+     * Render an amount control with the same feedback markup as Moodle text elements.
+     *
+     * @param int|string $index Row index.
+     * @param string $side Debit or credit.
+     * @param string $amount Display amount.
+     * @param string $placeholder Display format hint.
+     * @param string $error Field validation message.
+     * @return string Input and inline feedback.
+     */
+    protected function build_amount_input($index, string $side, string $amount, string $placeholder, string $error): string {
+        $id = 'id_' . $side . 'amount_display_' . $index;
+        $attributes = [
+            'type' => 'text',
+            'name' => $side . 'amount_display[' . $index . ']',
+            'id' => $id,
+            'value' => $amount,
+            'class' => 'form-control qtype_accounting-' . $side . 'amount' . ($error !== '' ? ' is-invalid' : ''),
+            'data-index' => $index,
+            'placeholder' => $placeholder,
+        ];
+        if ($error !== '') {
+            $attributes['aria-invalid'] = 'true';
+            $attributes['aria-describedby'] = $id . '_error';
+        }
+        $html = \html_writer::empty_tag('input', $attributes);
+        if ($error !== '') {
+            $html .= \html_writer::div(s($error), 'form-control-feedback invalid-feedback d-block', ['id' => $id . '_error']);
+        }
         return $html;
     }
 
@@ -342,16 +406,31 @@ class entries_table_builder {
     }
 
     /**
+     * Preserve missing amounts and keep the absent side of saved entries empty.
+     *
+     * @param object|null $entry Existing or submitted entry.
+     * @param string $side Debit or credit.
+     * @param string $numberformat The display format.
+     * @return string The amount for the display control.
+     */
+    protected function format_entry_amount(?object $entry, string $side, string $numberformat): string {
+        $amount = $entry->{$side . 'amount'} ?? '';
+        $accountid = $entry->{$side . 'accountid'} ?? 0;
+        // Saved one-sided entries store zero for the absent side.
+        if ($amount === '' || (!$accountid && (float)$amount == 0)) {
+            return '';
+        }
+        return $this->format_amount((float)$amount, $numberformat);
+    }
+
+    /**
      * Format a float amount for display inside the edit form.
      *
      * @param float $amount The amount value.
      * @param string $numberformat 'de' or 'us'.
-     * @return string The formatted amount (empty for values close to zero).
+     * @return string The formatted amount.
      */
     protected function format_amount(float $amount, string $numberformat = 'de'): string {
-        if (abs($amount) < 0.001) {
-            return '';
-        }
         if ($numberformat === 'us') {
             return number_format($amount, 2, '.', ',');
         }
