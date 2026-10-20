@@ -118,6 +118,7 @@ $string['chartcopied'] = 'Chart of accounts copied to this course. You can now a
 $string['copytocourse'] = 'Copy to this course';
 $string['sitechart_suffix'] = '{$a} (site default)';
 $string['sitecharts'] = 'Site charts of accounts';
+$string['sitecharts_add'] = 'Create or upload a site chart of accounts';
 $string['sitecharts_course_desc'] = 'These charts of accounts are provided by the site administrator and can be selected in every question. They cannot be changed here; copy a chart into this course to adapt it.';
 $string['sitecharts_desc'] = 'Charts of accounts created or uploaded here are available to teachers in every course. Teachers can still create or upload their own charts in their courses.';
 $string['addchart'] = 'Add new chart';

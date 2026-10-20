@@ -61,11 +61,15 @@ $accountid = optional_param('accountid', 0, PARAM_INT);
 $editaccount = optional_param('editaccount', 0, PARAM_INT);
 $returnurl = optional_param('returnurl', '', PARAM_LOCALURL);
 
-// Without a course, a site chart is edited from the site administration.
+// Without a course, a site chart is edited from the plugin's settings page.
 $urlparams = $courseid ? ['courseid' => $courseid] : [];
-$manageurl = new moodle_url('/question/type/accounting/manage_charts.php', $urlparams);
-if ($returnurl !== '') {
-    $manageurl->param('returnurl', $returnurl);
+if ($courseid) {
+    $manageurl = new moodle_url('/question/type/accounting/manage_charts.php', $urlparams);
+    if ($returnurl !== '') {
+        $manageurl->param('returnurl', $returnurl);
+    }
+} else {
+    $manageurl = new moodle_url('/admin/settings.php', ['section' => 'qtypesettingaccounting']);
 }
 $baseurl = new moodle_url('/question/type/accounting/edit_chart.php', $urlparams + ['chartid' => $chartid]);
 if ($returnurl !== '') {
@@ -379,7 +383,7 @@ echo html_writer::start_div(
     'qtype_accounting-chart-actions d-flex flex-wrap justify-content-center align-items-center mt-4 mb-3',
     ['style' => 'gap: 0.5rem;']
 );
-echo html_writer::link($manageurl, '&laquo; ' . get_string('managecharts', 'qtype_accounting'), [
+echo html_writer::link($manageurl, '&laquo; ' . get_string($courseid ? 'managecharts' : 'sitecharts', 'qtype_accounting'), [
     'class' => 'btn btn-primary',
 ]);
 echo html_writer::link($exporturl, get_string('exportaccounts', 'qtype_accounting'), [

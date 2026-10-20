@@ -120,6 +120,7 @@ $string['chartcopied'] = 'Der Kontenplan wurde in diesen Kurs kopiert und kann j
 $string['copytocourse'] = 'In diesen Kurs kopieren';
 $string['sitechart_suffix'] = '{$a} (Website-Standard)';
 $string['sitecharts'] = 'Standard-Kontenpläne der Website';
+$string['sitecharts_add'] = 'Standard-Kontenplan erstellen oder hochladen';
 $string['sitecharts_course_desc'] = 'Diese Kontenpläne stellt die Administration bereit; sie können in jeder Frage ausgewählt werden. Sie lassen sich hier nicht ändern. Kopieren Sie einen Kontenplan in diesen Kurs, um ihn anzupassen.';
 $string['sitecharts_desc'] = 'Hier erstellte oder hochgeladene Kontenpläne stehen Lehrkräften in allen Kursen zur Auswahl. Lehrkräfte können weiterhin eigene Kontenpläne in ihren Kursen erstellen oder hochladen.';
 $string['addchart'] = 'Neuen Kontenplan hinzufügen';
