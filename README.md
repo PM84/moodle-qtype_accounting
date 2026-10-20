@@ -107,7 +107,7 @@ The plugin has no external service dependencies. It does not require Composer, N
 1. Place the plugin source so that `version.php` sits at `<moodledir>/question/type/accounting/version.php`.
 2. As a site administrator, visit **Site administration → Notifications**. Moodle will detect the new plugin and run `install.xml`.
 
-The plugin has no admin settings page — all configuration is per-question, and charts of accounts are scoped to courses.
+The plugin has no admin settings page apart from the site charts of accounts (see [Site charts of accounts](#site-charts-of-accounts)) — all configuration is per question.
 
 ---
 
@@ -165,6 +165,14 @@ On the management page you can:
 
 CSV files may be UTF-8 or Windows-1252 (Excel's default); a UTF-8 BOM, if present, is stripped automatically.
 
+### Site charts of accounts
+
+Administrators can provide standard charts for all courses under **Site administration → Plugins → Question types → Site charts of accounts**. The page offers the same create, upload, edit, download and delete functions; it requires `qtype/accounting:managecharts` in the system context.
+
+Site charts appear in every question form after the course's own charts, marked as *(site default)*. In a course they are read-only: the course management page lists them with **Download** and **Copy to this course**, so teachers can adapt a copy. Teachers can still create and upload their own course charts.
+
+When questions are restored or imported, a matching chart in the target course is reused first, then a matching site chart; otherwise a course chart is created.
+
 ---
 
 ## Grading model
@@ -205,7 +213,7 @@ The plugin implements both backup and restore via `backup/moodle2/`. Course back
 
 | Capability | Default roles | Risk | Purpose |
 |---|---|---|---|
-| `qtype/accounting:managecharts` | `manager`, `editingteacher` | `RISK_CONFIG` | Create, edit, upload, download, and delete charts of accounts at course level. |
+| `qtype/accounting:managecharts` | `manager`, `editingteacher` | `RISK_CONFIG` | Create, edit, upload, download, and delete charts of accounts at course level; in the system context, manage the site charts. |
 
 Authors of questions inherit existing Moodle question capabilities (`moodle/question:add`, etc.) — no extra capability is needed to write Buchungssatz questions beyond standard Moodle quiz/question permissions.
 
