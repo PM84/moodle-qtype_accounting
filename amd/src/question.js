@@ -274,6 +274,7 @@ function addEntry(container, template, tbody, nextIndex, entryType) {
 
         initSelect2OnRow($(incompleteRow));
         EntryUtils.updatePerLabels(container, ROW_SELECTOR);
+        updateDeleteButtons(container);
         return nextIndex;
     }
 
@@ -386,6 +387,11 @@ function deleteEntrySide(container, entryIndex, side) {
         return;
     }
 
+    // Each side keeps at least one entry.
+    if (EntryUtils.countSideRows(container, ROW_SELECTOR, side) <= 1) {
+        return;
+    }
+
     const currentType = entryRow.attr('data-entry-type') || 'both';
 
     if (currentType === 'both') {
@@ -400,6 +406,7 @@ function deleteEntrySide(container, entryIndex, side) {
         EntryUtils.clearEntrySideFields(entryRow[0], side);
 
         EntryUtils.updatePerLabels(container, ROW_SELECTOR);
+        updateDeleteButtons(container);
     } else if ((currentType === 'debit' && side === 'debit') ||
                (currentType === 'credit' && side === 'credit')) {
         // Row only has this side - delete the entire row.
@@ -410,24 +417,15 @@ function deleteEntrySide(container, entryIndex, side) {
 
 /**
  * Update delete button visibility.
- * Hide delete buttons if only one entry is visible.
+ * Hide the delete buttons of a side if it has only one entry left.
  *
  * @param {jQuery} container The question container.
  */
 function updateDeleteButtons(container) {
-    const visibleRows = container.find(ROW_SELECTOR).filter(function () {
-        return $(this).css('display') !== 'none';
+    ['debit', 'credit'].forEach(function(side) {
+        const visibility = EntryUtils.countSideRows(container, ROW_SELECTOR, side) <= 1 ? 'hidden' : 'visible';
+        container.find(ROW_SELECTOR + ' .qtype_accounting-delete-' + side).css('visibility', visibility);
     });
-
-    if (visibleRows.length <= 1) {
-        container.find('.qtype_accounting-delete-debit, .qtype_accounting-delete-credit').css('visibility', 'hidden');
-    } else {
-        container.find(ROW_SELECTOR).each(function () {
-            if ($(this).css('display') !== 'none') {
-                $(this).find('.qtype_accounting-delete-debit, .qtype_accounting-delete-credit').css('visibility', 'visible');
-            }
-        });
-    }
 }
 
 export {init};
