@@ -1049,3 +1049,19 @@ form:has(#id_gradingmode option[value="points"]:checked):has(.qtype_accounting-s
 .qtype_accounting-hideper > tfoot > tr > :first-child {
     display: none;
 }
+
+/* Currency symbol after the amount inputs. */
+.qtype_accounting-amount-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.qtype_accounting-amount-group > .qtype_accounting-amount-input {
+    flex: 1 1 auto;
+}
+
+.qtype_accounting-currency {
+    flex: 0 0 auto;
+    white-space: nowrap;
+}

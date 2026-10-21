@@ -29,6 +29,7 @@ require_once($CFG->dirroot . '/question/type/accounting/tests/helper.php');
  * @copyright  2026 Hochschule Flensburg / lambda9
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  * @covers     \qtype_accounting_renderer
+ * @covers     \qtype_accounting\answer_renderer
  */
 final class walkthrough_test extends \qbehaviour_walkthrough_test_base {
     /**
@@ -37,6 +38,7 @@ final class walkthrough_test extends \qbehaviour_walkthrough_test_base {
     public function test_amount_column_width_follows_setting(): void {
         $this->resetAfterTest();
         $question = \test_question_maker::make_question('accounting', 'simple_debit_credit');
+        $question->currency = currency_helper::NONE;
         $this->start_attempt_at_question($question, 'deferredfeedback', 1);
 
         $this->render();
@@ -49,5 +51,60 @@ final class walkthrough_test extends \qbehaviour_walkthrough_test_base {
         set_config('amountminwidth', 0, 'qtype_accounting');
         $this->render();
         $this->assertEquals(2, substr_count($this->currentoutput, '<col style="width: calc(175px + 1rem + 1px);">'));
+
+        // A currency symbol widens the amount columns by its length.
+        $question->currency = 'CHF';
+        $this->render();
+        $this->assertEquals(2, substr_count($this->currentoutput, '<col style="width: calc(175px + 1rem + 1px + 3ch + 0.5rem);">'));
+    }
+
+    /**
+     * The question's currency symbol follows every amount input, including the row template.
+     */
+    public function test_currency_symbol_after_amount_inputs(): void {
+        $this->resetAfterTest();
+        $question = \test_question_maker::make_question('accounting', 'simple_debit_credit');
+        $question->currency = 'USD';
+        $this->start_attempt_at_question($question, 'deferredfeedback', 1);
+        $this->render();
+        // One debit and one credit input in the visible row and in the template.
+        $this->assertEquals(4, substr_count($this->currentoutput, '<span class="qtype_accounting-currency" aria-hidden="true">$</span>'));
+        $this->assertStringContainsString('data-currencysymbol="$"', $this->currentoutput);
+    }
+
+    /**
+     * Without a currency symbol the amount inputs are rendered without the wrapper.
+     */
+    public function test_no_currency_symbol(): void {
+        $this->resetAfterTest();
+        $question = \test_question_maker::make_question('accounting', 'simple_debit_credit');
+        $question->currency = currency_helper::NONE;
+        $this->start_attempt_at_question($question, 'deferredfeedback', 1);
+        $this->render();
+        $this->assertStringNotContainsString('qtype_accounting-currency', $this->currentoutput);
+        $this->assertStringNotContainsString('qtype_accounting-amount-group', $this->currentoutput);
+    }
+
+    /**
+     * An empty currency uses the site default; the review shows the symbol after the student's amounts.
+     */
+    public function test_review_shows_site_default_symbol(): void {
+        $this->resetAfterTest();
+        set_config('defaultcurrency', 'GBP', 'qtype_accounting');
+        $question = \test_question_maker::make_question('accounting', 'simple_debit_credit');
+        $question->currency = null;
+        $this->start_attempt_at_question($question, 'deferredfeedback', 1);
+        $this->process_submission(\qtype_accounting_test_helper::make_response(
+            \qtype_accounting_test_helper::ACCOUNT_BANK,
+            1000,
+            \qtype_accounting_test_helper::ACCOUNT_ERLOESE,
+            1000
+        ));
+        $this->finish();
+        $this->displayoptions->rightanswer = \question_display_options::VISIBLE;
+        $this->render();
+        // Student amounts (debit and credit) and the correct answer (debit and credit).
+        $this->assertEquals(4, substr_count($this->currentoutput, "1.000,00\u{00A0}£"));
+        $this->assertStringNotContainsString('qtype_accounting-amount-group', $this->currentoutput);
     }
 }

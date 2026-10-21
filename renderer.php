@@ -58,6 +58,7 @@ class qtype_accounting_renderer extends qtype_renderer {
         $containerid = 'qtype_accounting-container-' . $qa->get_slot();
         $templateid = 'qtype_accounting-entry-template-' . $qa->get_slot();
         $numberformat = $question->numberformat ?? 'de';
+        $currencysymbol = \qtype_accounting\currency_helper::get_symbol($question->currency ?? null);
         $visiblerows = $this->count_visible_rows($response);
         $filteredaccounts = $this->build_filtered_accounts($question, $response, (bool)$options->readonly);
 
@@ -75,6 +76,7 @@ class qtype_accounting_renderer extends qtype_renderer {
             'data-accounts' => json_encode(array_values($filteredaccounts)),
             'data-allowedit' => !$options->readonly ? '1' : '0',
             'data-numberformat' => $numberformat,
+            'data-currencysymbol' => $currencysymbol,
             'data-nextindex' => $visiblerows,
             'data-templateid' => $templateid,
         ];
@@ -145,7 +147,8 @@ class qtype_accounting_renderer extends qtype_renderer {
     ): string {
         $hideper = (string)get_config('qtype_accounting', 'showpercolumn') === '0' ? ' qtype_accounting-hideper' : '';
         $html = '<table class="table table-bordered qtype_accounting-student-table' . $hideper . '">';
-        $html .= $this->render_colgroup(!$options->readonly);
+        $currencysymbol = \qtype_accounting\currency_helper::get_symbol($question->currency ?? null);
+        $html .= $this->render_colgroup(!$options->readonly, $currencysymbol);
         $html .= $this->render_header_row(!$options->readonly);
         $html .= '<tbody class="qtype_accounting-entries">';
 
@@ -273,10 +276,16 @@ class qtype_accounting_renderer extends qtype_renderer {
      * This ensures consistent column widths across Bootstrap 4 (Moodle 3.x) and Bootstrap 5 (Moodle 4.x).
      *
      * @param bool $showactions Whether to include an actions column.
+     * @param string $currencysymbol Currency symbol shown after the amount inputs ('' for none).
      * @return string The HTML colgroup element.
      */
-    protected function render_colgroup(bool $showactions = false): string {
+    protected function render_colgroup(bool $showactions = false, string $currencysymbol = ''): string {
         $amountwidth = 'calc(' . \qtype_accounting\amount_helper::get_min_width() . 'px + 1rem + 1px)';
+        if ($currencysymbol !== '') {
+            // Room for the symbol and the gap next to the input.
+            $amountwidth = 'calc(' . \qtype_accounting\amount_helper::get_min_width() . 'px + 1rem + 1px + '
+                . core_text::strlen($currencysymbol) . 'ch + 0.5rem)';
+        }
         $html = '<colgroup>';
         // Column 1: Per label (narrow).
         $html .= '<col style="width: 40px;">';
@@ -333,6 +342,7 @@ class qtype_accounting_renderer extends qtype_renderer {
         $entrytype = \qtype_accounting\entry_helper::determine_entry_type($vals['debitaccount'], $vals['creditaccount']);
         $hiddenclasses = \qtype_accounting\entry_helper::get_hidden_classes($entrytype);
         $numberformat = $question->numberformat ?? 'de';
+        $currencysymbol = \qtype_accounting\currency_helper::get_symbol($question->currency ?? null);
 
         $rowstyle = $hidden ? 'display: none;' : '';
         $html = '<tr class="qtype_accounting-entry-row" data-entry="' . $index
@@ -346,7 +356,8 @@ class qtype_accounting_renderer extends qtype_renderer {
             $hiddenclasses,
             $showdelete,
             $numberformat,
-            $feedbackclasses
+            $feedbackclasses,
+            $currencysymbol
         );
         $html .= $this->render_credit_cells(
             $qa,
@@ -357,7 +368,8 @@ class qtype_accounting_renderer extends qtype_renderer {
             $hiddenclasses,
             $showdelete,
             $numberformat,
-            $feedbackclasses
+            $feedbackclasses,
+            $currencysymbol
         );
         $html .= '</tr>';
         return $html;
@@ -375,6 +387,7 @@ class qtype_accounting_renderer extends qtype_renderer {
      * @param bool $showdelete Whether to render the debit delete button.
      * @param string $numberformat 'de' or 'us'.
      * @param array $feedbackclasses Per-field feedback CSS classes (debitaccount/debitamount/...).
+     * @param string $currencysymbol Currency symbol shown after the amount ('' for none).
      * @return string HTML for the per-label cell, debit account cell, debit amount cell, and 'an' cell.
      */
     protected function render_debit_cells(
@@ -386,7 +399,8 @@ class qtype_accounting_renderer extends qtype_renderer {
         array $hiddenclasses,
         bool $showdelete,
         string $numberformat,
-        array $feedbackclasses
+        array $feedbackclasses,
+        string $currencysymbol = ''
     ): string {
         $debithidden = $hiddenclasses['debit'];
         $html = '<td class="qtype_accounting-label-cell' . $debithidden . '" data-section="debit"></td>';
@@ -407,7 +421,8 @@ class qtype_accounting_renderer extends qtype_renderer {
             $vals['debitamount'],
             $qa->get_qt_field_name("debitamount_{$index}"),
             $feedbackclasses['debitamount'] ?? '',
-            $numberformat
+            $numberformat,
+            $currencysymbol
         );
         $html .= '</td>';
         // The "an" label cell - contains debit delete button if editable.
@@ -431,6 +446,7 @@ class qtype_accounting_renderer extends qtype_renderer {
      * @param bool $showdelete Whether to render the credit delete cell.
      * @param string $numberformat 'de' or 'us'.
      * @param array $feedbackclasses Per-field feedback CSS classes.
+     * @param string $currencysymbol Currency symbol shown after the amount ('' for none).
      * @return string HTML for the credit account cell, credit amount cell, and optional actions cell.
      */
     protected function render_credit_cells(
@@ -442,7 +458,8 @@ class qtype_accounting_renderer extends qtype_renderer {
         array $hiddenclasses,
         bool $showdelete,
         string $numberformat,
-        array $feedbackclasses
+        array $feedbackclasses,
+        string $currencysymbol = ''
     ): string {
         $credithidden = $hiddenclasses['credit'];
         $html = '<td class="qtype_accounting-data-cell' . $credithidden
@@ -462,7 +479,8 @@ class qtype_accounting_renderer extends qtype_renderer {
             $vals['creditamount'],
             $qa->get_qt_field_name("creditamount_{$index}"),
             $feedbackclasses['creditamount'] ?? '',
-            $numberformat
+            $numberformat,
+            $currencysymbol
         );
         $html .= '</td>';
         if ($showdelete) {
@@ -502,6 +520,7 @@ class qtype_accounting_renderer extends qtype_renderer {
 
         $numberformat = $question->numberformat ?? 'de';
         $amountplaceholder = ($numberformat === 'us') ? '0.00' : '0,00';
+        $currencysymbol = \qtype_accounting\currency_helper::get_symbol($question->currency ?? null);
         $accountlabel = get_string('account', 'qtype_accounting');
         $amountlabel = get_string('amount', 'qtype_accounting');
         $selectplaceholder = get_string('selectaccount', 'qtype_accounting');
@@ -524,9 +543,12 @@ class qtype_accounting_renderer extends qtype_renderer {
 
         // Debit (Debit) amount cell.
         $html .= '<td class="qtype_accounting-data-cell" data-label="' . $amountlabel . '">';
-        $html .= '<input type="text" name="' . $debitamountname . '" id="' . $debitamountname . '" value="" ' .
+        $html .= $this->wrap_amount_input(
+            '<input type="text" name="' . $debitamountname . '" id="' . $debitamountname . '" value="" ' .
             'class="form-control qtype_accounting-amount-input" placeholder="' . $amountplaceholder . '" ' .
-            'inputmode="decimal" aria-label="' . $amountlabel . '">';
+            'inputmode="decimal" aria-label="' . $amountlabel . '">',
+            $currencysymbol
+        );
         $html .= '</td>';
 
         // The "an" label cell — contains debit delete button.
@@ -543,9 +565,12 @@ class qtype_accounting_renderer extends qtype_renderer {
 
         // Credit (Credit) amount cell.
         $html .= '<td class="qtype_accounting-data-cell" data-label="' . $amountlabel . '">';
-        $html .= '<input type="text" name="' . $creditamountname . '" id="' . $creditamountname . '" value="" ' .
+        $html .= $this->wrap_amount_input(
+            '<input type="text" name="' . $creditamountname . '" id="' . $creditamountname . '" value="" ' .
             'class="form-control qtype_accounting-amount-input" placeholder="' . $amountplaceholder . '" ' .
-            'inputmode="decimal" aria-label="' . $amountlabel . '">';
+            'inputmode="decimal" aria-label="' . $amountlabel . '">',
+            $currencysymbol
+        );
         $html .= '</td>';
 
         // Credit delete button cell.
@@ -610,6 +635,7 @@ class qtype_accounting_renderer extends qtype_renderer {
      * @param string $name The field name.
      * @param string $feedbackclass CSS class for feedback styling.
      * @param string $numberformat The number format ('de' or 'us').
+     * @param string $currencysymbol Currency symbol shown after the amount ('' for none).
      * @return string The HTML output.
      */
     protected function render_amount_field(
@@ -617,7 +643,8 @@ class qtype_accounting_renderer extends qtype_renderer {
         string $value,
         string $name,
         string $feedbackclass = '',
-        string $numberformat = 'de'
+        string $numberformat = 'de',
+        string $currencysymbol = ''
     ): string {
         if ($readonly) {
             $spanclass = 'qtype_accounting-readonly';
@@ -627,6 +654,9 @@ class qtype_accounting_renderer extends qtype_renderer {
             // Parse the amount (handles both German and US formats) then format for display.
             $parsedvalue = \qtype_accounting\amount_helper::parse_amount($value, $numberformat);
             $displayval = $this->format_amount_display($parsedvalue, $numberformat);
+            if ($displayval !== '' && $currencysymbol !== '') {
+                $displayval .= "\u{00A0}" . $currencysymbol;
+            }
             $html = '<span class="' . $spanclass . '" style="text-align: end;">' . s($displayval) . '</span>';
             $html .= '<input type="hidden" name="' . $name . '" value="' . s($value) . '">';
             return $html;
@@ -634,10 +664,26 @@ class qtype_accounting_renderer extends qtype_renderer {
 
         // Use type="text" to allow formatted numbers with thousand separators.
         $placeholder = ($numberformat === 'us') ? '0.00' : '0,00';
-        return '<input type="text" name="' . $name . '" id="' . $name . '" value="' . s($value) . '" ' .
+        $input = '<input type="text" name="' . $name . '" id="' . $name . '" value="' . s($value) . '" ' .
                'class="form-control qtype_accounting-amount-input" placeholder="' . $placeholder . '" ' .
                'inputmode="decimal" ' .
                'aria-label="' . get_string('amount', 'qtype_accounting') . '">';
+        return $this->wrap_amount_input($input, $currencysymbol);
+    }
+
+    /**
+     * Place the currency symbol after an amount input.
+     *
+     * @param string $input The HTML of the amount input.
+     * @param string $currencysymbol Currency symbol ('' for none, then the input is returned unchanged).
+     * @return string The HTML output.
+     */
+    protected function wrap_amount_input(string $input, string $currencysymbol): string {
+        if ($currencysymbol === '') {
+            return $input;
+        }
+        return '<div class="qtype_accounting-amount-group">' . $input
+            . '<span class="qtype_accounting-currency" aria-hidden="true">' . s($currencysymbol) . '</span></div>';
     }
 
     /**
