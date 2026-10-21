@@ -33,11 +33,22 @@ require_once($CFG->dirroot . '/question/type/accounting/tests/helper.php');
  */
 final class walkthrough_test extends \qbehaviour_walkthrough_test_base {
     /**
+     * Make the simple test question with the version info that the question renderer needs.
+     *
+     * @return \qtype_accounting_question
+     */
+    protected function make_simple_question(): \qtype_accounting_question {
+        $question = \test_question_maker::make_question('accounting', 'simple_debit_credit');
+        $question->version = 1;
+        return $question;
+    }
+
+    /**
      * The question's currency symbol follows every amount input, including the row template.
      */
     public function test_currency_symbol_after_amount_inputs(): void {
         $this->resetAfterTest();
-        $question = \test_question_maker::make_question('accounting', 'simple_debit_credit');
+        $question = $this->make_simple_question();
         $question->currency = 'USD';
         $this->start_attempt_at_question($question, 'deferredfeedback', 1);
         $this->render();
@@ -51,7 +62,7 @@ final class walkthrough_test extends \qbehaviour_walkthrough_test_base {
      */
     public function test_no_currency_symbol(): void {
         $this->resetAfterTest();
-        $question = \test_question_maker::make_question('accounting', 'simple_debit_credit');
+        $question = $this->make_simple_question();
         $question->currency = currency_helper::NONE;
         $this->start_attempt_at_question($question, 'deferredfeedback', 1);
         $this->render();
@@ -65,7 +76,7 @@ final class walkthrough_test extends \qbehaviour_walkthrough_test_base {
     public function test_review_shows_site_default_symbol(): void {
         $this->resetAfterTest();
         set_config('defaultcurrency', 'GBP', 'qtype_accounting');
-        $question = \test_question_maker::make_question('accounting', 'simple_debit_credit');
+        $question = $this->make_simple_question();
         $question->currency = null;
         $this->start_attempt_at_question($question, 'deferredfeedback', 1);
         $this->process_submission(\qtype_accounting_test_helper::make_response(
